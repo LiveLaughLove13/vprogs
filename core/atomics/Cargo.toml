@@ -1,0 +1,8 @@
+[package]
+edition = "2021"
+name    = "vprogs-core-atomics"
+version = "0.1.0"
+
+[dependencies]
+futures    = "0.3.31"
+tokio-util = "0.7.17"

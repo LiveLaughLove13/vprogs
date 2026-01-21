@@ -1,0 +1,8 @@
+[package]
+edition = "2021"
+name    = "vprogs-transaction-runtime-object-access"
+version = "0.1.0"
+
+[dependencies]
+vprogs-core-types                    = { path = "../../core/types" }
+vprogs-transaction-runtime-object-id = { path = "../object-id" }

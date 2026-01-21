@@ -1,0 +1,24 @@
+[package]
+edition = "2021"
+name    = "vprogs-transaction-runtime"
+version = "0.1.0"
+
+[dependencies]
+borsh                                          = "1.6.0"
+vprogs-core-types                              = { path = "../../core/types" }
+vprogs-scheduling-scheduler                    = { path = "../../scheduling/scheduler" }
+vprogs-state-space                             = { path = "../../state/space" }
+vprogs-storage-types                           = { path = "../../storage/types" }
+vprogs-transaction-runtime-address             = { path = "../address" }
+vprogs-transaction-runtime-auth-context        = { path = "../auth-context" }
+vprogs-transaction-runtime-authenticated-data  = { path = "../authenticated-data" }
+vprogs-transaction-runtime-data                = { path = "../data" }
+vprogs-transaction-runtime-data-context        = { path = "../data-context" }
+vprogs-transaction-runtime-error               = { path = "../error" }
+vprogs-transaction-runtime-instruction         = { path = "../instruction" }
+vprogs-transaction-runtime-lock                = { path = "../lock" }
+vprogs-transaction-runtime-object-id           = { path = "../object-id" }
+vprogs-transaction-runtime-program             = { path = "../program" }
+vprogs-transaction-runtime-pubkey              = { path = "../pubkey" }
+vprogs-transaction-runtime-transaction         = { path = "../transaction" }
+vprogs-transaction-runtime-transaction-effects = { path = "../transaction-effects" }

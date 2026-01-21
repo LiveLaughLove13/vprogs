@@ -1,0 +1,7 @@
+[package]
+edition = "2021"
+name    = "vprogs-transaction-runtime-program-arg"
+version = "0.1.0"
+
+[dependencies]
+vprogs-transaction-runtime-address = { path = "../address" }

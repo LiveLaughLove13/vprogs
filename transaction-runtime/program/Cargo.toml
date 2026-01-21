@@ -1,0 +1,8 @@
+[package]
+edition = "2021"
+name    = "vprogs-transaction-runtime-program"
+version = "0.1.0"
+
+[dependencies]
+borsh                                   = "1.6.0"
+vprogs-transaction-runtime-program-type = { path = "../program-type" }
