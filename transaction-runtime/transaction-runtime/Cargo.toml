@@ -5,6 +5,8 @@ version.workspace = true
 
 [dependencies]
 borsh.workspace                                          = true
+cairo-vm.workspace                                       = true
+sha2.workspace                                           = true
 vprogs-core-types.workspace                              = true
 vprogs-scheduling-scheduler.workspace                    = true
 vprogs-state-space.workspace                             = true
@@ -19,6 +21,9 @@ vprogs-transaction-runtime-instruction.workspace         = true
 vprogs-transaction-runtime-lock.workspace                = true
 vprogs-transaction-runtime-object-id.workspace           = true
 vprogs-transaction-runtime-program.workspace             = true
+vprogs-transaction-runtime-program-arg.workspace         = true
+vprogs-transaction-runtime-program-context.workspace    = true
+vprogs-transaction-runtime-program-type.workspace        = true
 vprogs-transaction-runtime-pubkey.workspace              = true
 vprogs-transaction-runtime-transaction.workspace         = true
 vprogs-transaction-runtime-transaction-effects.workspace = true

@@ -1,5 +1,6 @@
 use vprogs_transaction_runtime_address::Address;
 
+#[derive(Clone, Debug)]
 pub enum ProgramArg {
     StoredData(Address),
     ReturnedData(usize, usize),

@@ -1,7 +1,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use vprogs_transaction_runtime_program_type::ProgramType;
 
-#[derive(BorshSerialize, BorshDeserialize)]
+#[derive(Clone, BorshSerialize, BorshDeserialize)]
 pub struct Program {
     // The type of the program
     program_type: ProgramType,
