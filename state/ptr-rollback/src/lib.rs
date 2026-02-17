@@ -8,35 +8,37 @@ use vprogs_storage_types::{Store, WriteBatch};
 /// StatePtrRollback stores the version a resource had before a batch was applied,
 /// allowing state to be reverted during chain reorganization.
 ///
-/// Key layout: `batch_index.to_be_bytes() || resource_id.to_bytes()`
-/// Value layout: `old_version.to_be_bytes()` (u64)
+/// Key layout: `batch_index (u64 BE) || resource_id (borsh)`
+/// Value layout: `old_version (u64 BE)`
 pub struct StatePtrRollback;
 
 impl StatePtrRollback {
     /// Stores the version a resource had before a batch was applied.
-    pub fn put<W, R>(store: &mut W, batch_index: u64, resource_id: &R, old_version: u64)
+    pub fn put<W, R>(wb: &mut W, batch_index: u64, resource_id: &R, old_version: u64)
     where
         W: WriteBatch<StateSpace = StateSpace>,
         R: ResourceId,
     {
-        let key = concat_bytes!(&batch_index.to_be_bytes(), &resource_id.to_bytes());
-        store.put(StateSpace::StatePtrRollback, &key, &old_version.to_be_bytes());
+        let rid = borsh::to_vec(resource_id).expect("failed to serialize ResourceId");
+        let key = concat_bytes!(&batch_index.to_be_bytes(), &rid);
+        wb.put(StateSpace::StatePtrRollback, &key, &old_version.to_be_bytes());
     }
 
     /// Deletes a rollback pointer entry.
-    pub fn delete<W, R>(store: &mut W, batch_index: u64, resource_id: &R)
+    pub fn delete<W, R>(wb: &mut W, batch_index: u64, resource_id: &R)
     where
         W: WriteBatch<StateSpace = StateSpace>,
         R: ResourceId,
     {
-        let key = concat_bytes!(&batch_index.to_be_bytes(), &resource_id.to_bytes());
-        store.delete(StateSpace::StatePtrRollback, &key);
+        let rid = borsh::to_vec(resource_id).expect("failed to serialize ResourceId");
+        let key = concat_bytes!(&batch_index.to_be_bytes(), &rid);
+        wb.delete(StateSpace::StatePtrRollback, &key);
     }
 
     /// Iterates all rollback pointers for a given batch index.
     ///
     /// Returns an iterator yielding `(resource_id_bytes, old_version)` pairs.
-    /// The caller must decode the resource ID bytes using `ResourceId::from_bytes`.
+    /// The caller must decode the resource ID bytes using `borsh::from_slice`.
     pub fn iter_batch<S>(store: &S, batch_index: u64) -> impl Iterator<Item = (Vec<u8>, u64)> + '_
     where
         S: Store<StateSpace = StateSpace>,

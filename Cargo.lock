@@ -5494,6 +5494,7 @@ name = "vprogs-scheduling-scheduler"
 version = "0.1.0"
 dependencies = [
  "arc-swap",
+ "borsh",
  "crossbeam-deque",
  "crossbeam-queue",
  "num_cpus",
@@ -5503,6 +5504,7 @@ dependencies = [
  "vprogs-core-macros",
  "vprogs-core-types",
  "vprogs-scheduling-execution-workers",
+ "vprogs-state-batch-metadata",
  "vprogs-state-metadata",
  "vprogs-state-ptr-latest",
  "vprogs-state-ptr-rollback",
@@ -5529,9 +5531,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "vprogs-state-batch-metadata"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "vprogs-core-types",
+ "vprogs-state-space",
+ "vprogs-storage-types",
+]
+
+[[package]]
 name = "vprogs-state-metadata"
 version = "0.1.0"
 dependencies = [
+ "borsh",
+ "vprogs-core-types",
  "vprogs-state-space",
  "vprogs-storage-types",
 ]
@@ -5540,6 +5554,7 @@ dependencies = [
 name = "vprogs-state-ptr-latest"
 version = "0.1.0"
 dependencies = [
+ "borsh",
  "vprogs-core-types",
  "vprogs-state-space",
  "vprogs-storage-types",
@@ -5549,6 +5564,7 @@ dependencies = [
 name = "vprogs-state-ptr-rollback"
 version = "0.1.0"
 dependencies = [
+ "borsh",
  "vprogs-core-types",
  "vprogs-state-space",
  "vprogs-storage-manager",
@@ -5563,6 +5579,7 @@ version = "0.1.0"
 name = "vprogs-state-version"
 version = "0.1.0"
 dependencies = [
+ "borsh",
  "tap",
  "vprogs-core-types",
  "vprogs-state-ptr-latest",

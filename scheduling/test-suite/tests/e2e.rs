@@ -1,8 +1,10 @@
 use std::time::Duration;
 
 use tempfile::TempDir;
+use vprogs_core_types::Checkpoint;
 use vprogs_scheduling_scheduler::{ExecutionConfig, Scheduler};
 use vprogs_scheduling_test_suite::{Access, SchedulerExt, Tx, VM};
+use vprogs_state_metadata::StateMetadata;
 use vprogs_storage_manager::StorageConfig;
 use vprogs_storage_rocksdb_store::RocksDbStore;
 
@@ -16,16 +18,22 @@ pub fn test_runtime() {
             StorageConfig::default().with_store(storage),
         );
 
-        let batch1 = runtime.schedule(vec![
-            Tx(0, vec![Access::Write(1), Access::Read(3)]),
-            Tx(1, vec![Access::Write(1), Access::Write(2)]),
-            Tx(2, vec![Access::Read(3)]),
-        ]);
+        let batch1 = runtime.schedule(
+            1,
+            vec![
+                Tx(0, vec![Access::Write(1), Access::Read(3)]),
+                Tx(1, vec![Access::Write(1), Access::Write(2)]),
+                Tx(2, vec![Access::Read(3)]),
+            ],
+        );
 
-        let batch2 = runtime.schedule(vec![
-            Tx(3, vec![Access::Write(1), Access::Read(3)]),
-            Tx(4, vec![Access::Write(10), Access::Write(20)]),
-        ]);
+        let batch2 = runtime.schedule(
+            2,
+            vec![
+                Tx(3, vec![Access::Write(1), Access::Read(3)]),
+                Tx(4, vec![Access::Write(10), Access::Write(20)]),
+            ],
+        );
 
         batch1.wait_committed_blocking();
         batch2.wait_committed_blocking();
@@ -52,10 +60,10 @@ pub fn test_rollback_committed() {
             StorageConfig::default().with_store(storage),
         );
 
-        runtime.schedule(vec![Tx(0, vec![Access::Write(1)]), Tx(1, vec![Access::Write(2)])]);
-        runtime.schedule(vec![Tx(2, vec![Access::Write(1)]), Tx(3, vec![Access::Write(3)])]);
+        runtime.schedule(1, vec![Tx(0, vec![Access::Write(1)]), Tx(1, vec![Access::Write(2)])]);
+        runtime.schedule(2, vec![Tx(2, vec![Access::Write(1)]), Tx(3, vec![Access::Write(3)])]);
         let last_batch =
-            runtime.schedule(vec![Tx(4, vec![Access::Write(1)]), Tx(5, vec![Access::Write(4)])]);
+            runtime.schedule(3, vec![Tx(4, vec![Access::Write(1)]), Tx(5, vec![Access::Write(4)])]);
         last_batch.wait_committed_blocking();
 
         // Verify state before rollback
@@ -65,22 +73,37 @@ pub fn test_rollback_committed() {
             .assert_written_state(3, vec![3]) // Written by tx 3
             .assert_written_state(4, vec![5]); // Written by tx 5
 
-        // Rollback to index 1 (revert batches with index 1 and 2, keep batch with index 0)
-        runtime.rollback_to(1);
+        // Verify last committed checkpoint on disk
+        let checkpoint: Checkpoint<u64> =
+            StateMetadata::last_committed(&**runtime.storage().store());
+        assert_eq!(checkpoint.index(), 3);
+        assert_eq!(*checkpoint.metadata(), 3);
 
-        // Verify state after rollback - only batch0 effects should remain
+        // Rollback to index 1 (revert batches with index 2 and 3, keep batch with index 1)
+        let target = runtime.rollback_to(1);
+        assert_eq!(target.index(), 1);
+        assert_eq!(*target.metadata(), 1);
+
+        // Verify state after rollback - only batch1 effects should remain
         runtime
             .assert_written_state(1, vec![0]) // Only tx 0's write remains
-            .assert_written_state(2, vec![1]) // tx 1's write remains (in batch0)
+            .assert_written_state(2, vec![1]) // tx 1's write remains (in batch1)
             .assert_resource_deleted(3)
             .assert_resource_deleted(4);
+
+        // Verify last committed checkpoint on disk after rollback
+        let checkpoint: Checkpoint<u64> =
+            StateMetadata::last_committed(&**runtime.storage().store());
+        assert_eq!(checkpoint.index(), 1);
+        assert_eq!(*checkpoint.metadata(), 1);
 
         runtime.shutdown();
     }
 }
 
 /// Tests that new batches can be scheduled after a rollback and receive correct indices.
-/// After rollback, the context resets to the target index and new batches continue from there.
+/// After rollback, the batch execution context resets to the target index and new batches continue
+/// from there.
 #[test]
 pub fn test_add_batches_after_rollback() {
     let temp_dir = TempDir::new().expect("failed to create temp dir");
@@ -92,14 +115,14 @@ pub fn test_add_batches_after_rollback() {
         );
 
         // Schedule initial batches (indices 1, 2, 3)
-        let batch1 = runtime.schedule(vec![Tx(0, vec![Access::Write(1)])]);
-        let batch2 = runtime.schedule(vec![Tx(1, vec![Access::Write(2)])]);
-        let batch3 = runtime.schedule(vec![Tx(2, vec![Access::Write(3)])]);
+        let batch1 = runtime.schedule(1, vec![Tx(0, vec![Access::Write(1)])]);
+        let batch2 = runtime.schedule(2, vec![Tx(1, vec![Access::Write(2)])]);
+        let batch3 = runtime.schedule(3, vec![Tx(2, vec![Access::Write(3)])]);
         batch3.wait_committed_blocking();
 
-        assert_eq!(batch1.index(), 1);
-        assert_eq!(batch2.index(), 2);
-        assert_eq!(batch3.index(), 3);
+        assert_eq!(batch1.checkpoint().index(), 1);
+        assert_eq!(batch2.checkpoint().index(), 2);
+        assert_eq!(batch3.checkpoint().index(), 3);
 
         // Verify initial state
         runtime
@@ -117,12 +140,12 @@ pub fn test_add_batches_after_rollback() {
             .assert_written_state(1, vec![0]);
 
         // Schedule new batches after rollback - should continue from index 2
-        let batch4 = runtime.schedule(vec![Tx(10, vec![Access::Write(10)])]);
-        let batch5 = runtime.schedule(vec![Tx(11, vec![Access::Write(11)])]);
+        let batch4 = runtime.schedule(4, vec![Tx(10, vec![Access::Write(10)])]);
+        let batch5 = runtime.schedule(5, vec![Tx(11, vec![Access::Write(11)])]);
         batch5.wait_committed_blocking();
 
-        assert_eq!(batch4.index(), 2);
-        assert_eq!(batch5.index(), 3);
+        assert_eq!(batch4.checkpoint().index(), 2);
+        assert_eq!(batch5.checkpoint().index(), 3);
 
         // Verify new state
         runtime
@@ -148,13 +171,13 @@ pub fn test_inflight_cancellation_without_waiting() {
         );
 
         // Schedule a batch and wait for it to commit
-        let batch1 = runtime.schedule(vec![Tx(0, vec![Access::Write(1)])]);
+        let batch1 = runtime.schedule(1, vec![Tx(0, vec![Access::Write(1)])]);
         batch1.wait_committed_blocking();
 
         // Schedule multiple batches but don't wait for commitment
-        let batch2 = runtime.schedule(vec![Tx(1, vec![Access::Write(2)])]);
-        let batch3 = runtime.schedule(vec![Tx(2, vec![Access::Write(3)])]);
-        let batch4 = runtime.schedule(vec![Tx(3, vec![Access::Write(4)])]);
+        let batch2 = runtime.schedule(2, vec![Tx(1, vec![Access::Write(2)])]);
+        let batch3 = runtime.schedule(3, vec![Tx(2, vec![Access::Write(3)])]);
+        let batch4 = runtime.schedule(4, vec![Tx(3, vec![Access::Write(4)])]);
 
         // Immediately rollback without waiting for batches 2-4 to commit
         // This tests in-flight cancellation
@@ -174,7 +197,7 @@ pub fn test_inflight_cancellation_without_waiting() {
             .assert_resource_deleted(4);
 
         // New batches scheduled after rollback should work normally
-        let batch5 = runtime.schedule(vec![Tx(100, vec![Access::Write(100)])]);
+        let batch5 = runtime.schedule(5, vec![Tx(100, vec![Access::Write(100)])]);
         batch5.wait_committed_blocking();
         assert!(!batch5.was_canceled(), "batch5 should not be canceled");
         runtime.assert_written_state(100, vec![100]);
@@ -183,7 +206,7 @@ pub fn test_inflight_cancellation_without_waiting() {
     }
 }
 
-/// Tests rollback across multiple RuntimeContext objects with parent chain traversal.
+/// Tests rollback across multiple cancellation contexts with parent chain traversal.
 /// This complex scenario tests: apply 1-6; rollback to 5; apply 6-7; rollback to 3; apply 4-5.
 #[test]
 pub fn test_rollback_multiple_contexts() {
@@ -197,16 +220,16 @@ pub fn test_rollback_multiple_contexts() {
 
         // Phase 1: Apply batches 1-6
         // Using resource IDs that match batch indices for clarity
-        let batch1 = runtime.schedule(vec![Tx(1, vec![Access::Write(1)])]);
-        runtime.schedule(vec![Tx(2, vec![Access::Write(2)])]);
-        runtime.schedule(vec![Tx(3, vec![Access::Write(3)])]);
-        runtime.schedule(vec![Tx(4, vec![Access::Write(4)])]);
-        runtime.schedule(vec![Tx(5, vec![Access::Write(5)])]);
-        let batch6 = runtime.schedule(vec![Tx(6, vec![Access::Write(6)])]);
+        let batch1 = runtime.schedule(1, vec![Tx(1, vec![Access::Write(1)])]);
+        runtime.schedule(2, vec![Tx(2, vec![Access::Write(2)])]);
+        runtime.schedule(3, vec![Tx(3, vec![Access::Write(3)])]);
+        runtime.schedule(4, vec![Tx(4, vec![Access::Write(4)])]);
+        runtime.schedule(5, vec![Tx(5, vec![Access::Write(5)])]);
+        let batch6 = runtime.schedule(6, vec![Tx(6, vec![Access::Write(6)])]);
         batch6.wait_committed_blocking();
 
-        assert_eq!(batch1.index(), 1);
-        assert_eq!(batch6.index(), 6);
+        assert_eq!(batch1.checkpoint().index(), 1);
+        assert_eq!(batch6.checkpoint().index(), 6);
 
         // Verify all resources exist
         runtime
@@ -229,17 +252,17 @@ pub fn test_rollback_multiple_contexts() {
             .assert_written_state(4, vec![4])
             .assert_written_state(5, vec![5]);
 
-        // Phase 3: Apply new batches 6-7 (in the new context after rollback)
-        let new_batch6 = runtime.schedule(vec![Tx(60, vec![Access::Write(60)])]);
-        let batch7 = runtime.schedule(vec![Tx(70, vec![Access::Write(70)])]);
+        // Phase 3: Apply new batches 6-7 (after rollback)
+        let new_batch6 = runtime.schedule(60, vec![Tx(60, vec![Access::Write(60)])]);
+        let batch7 = runtime.schedule(70, vec![Tx(70, vec![Access::Write(70)])]);
         batch7.wait_committed_blocking();
 
-        assert_eq!(new_batch6.index(), 6);
-        assert_eq!(batch7.index(), 7);
+        assert_eq!(new_batch6.checkpoint().index(), 6);
+        assert_eq!(batch7.checkpoint().index(), 7);
 
         runtime.assert_written_state(60, vec![60]).assert_written_state(70, vec![70]);
 
-        // Phase 4: Rollback to 3 (must walk parent context chain)
+        // Phase 4: Rollback to 3 (must walk parent cancellation chain)
         runtime.rollback_to(3);
 
         // Batches 1-3 should remain, 4-5 and new 6-7 should be deleted
@@ -252,13 +275,13 @@ pub fn test_rollback_multiple_contexts() {
             .assert_resource_deleted(60)
             .assert_resource_deleted(70);
 
-        // Phase 5: Apply batches 4-5 (in the new context after second rollback)
-        let final_batch4 = runtime.schedule(vec![Tx(40, vec![Access::Write(40)])]);
-        let final_batch5 = runtime.schedule(vec![Tx(50, vec![Access::Write(50)])]);
+        // Phase 5: Apply batches 4-5 (after second rollback)
+        let final_batch4 = runtime.schedule(40, vec![Tx(40, vec![Access::Write(40)])]);
+        let final_batch5 = runtime.schedule(50, vec![Tx(50, vec![Access::Write(50)])]);
         final_batch5.wait_committed_blocking();
 
-        assert_eq!(final_batch4.index(), 4);
-        assert_eq!(final_batch5.index(), 5);
+        assert_eq!(final_batch4.checkpoint().index(), 4);
+        assert_eq!(final_batch5.checkpoint().index(), 5);
 
         // Verify final state
         runtime
@@ -285,9 +308,9 @@ pub fn test_rollback_to_zero() {
         );
 
         // Schedule several batches
-        runtime.schedule(vec![Tx(1, vec![Access::Write(1)])]);
-        runtime.schedule(vec![Tx(2, vec![Access::Write(2)])]);
-        let batch3 = runtime.schedule(vec![Tx(3, vec![Access::Write(3)])]);
+        runtime.schedule(1, vec![Tx(1, vec![Access::Write(1)])]);
+        runtime.schedule(2, vec![Tx(2, vec![Access::Write(2)])]);
+        let batch3 = runtime.schedule(3, vec![Tx(3, vec![Access::Write(3)])]);
         batch3.wait_committed_blocking();
 
         // Verify state exists
@@ -303,10 +326,10 @@ pub fn test_rollback_to_zero() {
         runtime.assert_resource_deleted(1).assert_resource_deleted(2).assert_resource_deleted(3);
 
         // New batches should start from index 1 again
-        let new_batch1 = runtime.schedule(vec![Tx(100, vec![Access::Write(100)])]);
+        let new_batch1 = runtime.schedule(100, vec![Tx(100, vec![Access::Write(100)])]);
         new_batch1.wait_committed_blocking();
 
-        assert_eq!(new_batch1.index(), 1);
+        assert_eq!(new_batch1.checkpoint().index(), 1);
         runtime.assert_written_state(100, vec![100]);
 
         runtime.shutdown();
@@ -326,11 +349,11 @@ pub fn test_consecutive_rollbacks() {
         );
 
         // Create 5 batches
-        runtime.schedule(vec![Tx(1, vec![Access::Write(1)])]);
-        runtime.schedule(vec![Tx(2, vec![Access::Write(2)])]);
-        runtime.schedule(vec![Tx(3, vec![Access::Write(3)])]);
-        runtime.schedule(vec![Tx(4, vec![Access::Write(4)])]);
-        let batch5 = runtime.schedule(vec![Tx(5, vec![Access::Write(5)])]);
+        runtime.schedule(1, vec![Tx(1, vec![Access::Write(1)])]);
+        runtime.schedule(2, vec![Tx(2, vec![Access::Write(2)])]);
+        runtime.schedule(3, vec![Tx(3, vec![Access::Write(3)])]);
+        runtime.schedule(4, vec![Tx(4, vec![Access::Write(4)])]);
+        let batch5 = runtime.schedule(5, vec![Tx(5, vec![Access::Write(5)])]);
         batch5.wait_committed_blocking();
 
         // Verify all exist
@@ -366,10 +389,10 @@ pub fn test_consecutive_rollbacks() {
             .assert_resource_deleted(3)
             .assert_written_state(1, vec![1]);
 
-        // Verify context indices are correct
-        let new_batch = runtime.schedule(vec![Tx(100, vec![Access::Write(100)])]);
+        // Verify batch execution indices are correct
+        let new_batch = runtime.schedule(100, vec![Tx(100, vec![Access::Write(100)])]);
         new_batch.wait_committed_blocking();
-        assert_eq!(new_batch.index(), 2);
+        assert_eq!(new_batch.checkpoint().index(), 2);
 
         runtime.shutdown();
     }
@@ -388,10 +411,10 @@ pub fn test_rollback_same_resource_multiple_writes() {
         );
 
         // Multiple batches all writing to resource 1
-        runtime.schedule(vec![Tx(10, vec![Access::Write(1)])]);
-        runtime.schedule(vec![Tx(20, vec![Access::Write(1)])]);
-        runtime.schedule(vec![Tx(30, vec![Access::Write(1)])]);
-        let batch4 = runtime.schedule(vec![Tx(40, vec![Access::Write(1)])]);
+        runtime.schedule(1, vec![Tx(10, vec![Access::Write(1)])]);
+        runtime.schedule(2, vec![Tx(20, vec![Access::Write(1)])]);
+        runtime.schedule(3, vec![Tx(30, vec![Access::Write(1)])]);
+        let batch4 = runtime.schedule(4, vec![Tx(40, vec![Access::Write(1)])]);
         batch4.wait_committed_blocking();
 
         // Resource 1 should have been written by all 4 transactions
@@ -402,7 +425,7 @@ pub fn test_rollback_same_resource_multiple_writes() {
         runtime.assert_written_state(1, vec![10, 20]);
 
         // Add more writes
-        let batch5 = runtime.schedule(vec![Tx(50, vec![Access::Write(1)])]);
+        let batch5 = runtime.schedule(5, vec![Tx(50, vec![Access::Write(1)])]);
         batch5.wait_committed_blocking();
 
         // Now should have 10, 20, 50
@@ -429,12 +452,12 @@ pub fn test_cancellation_skips_writes() {
         );
 
         // Create and commit a batch to resource 1
-        let batch1 = runtime.schedule(vec![Tx(1, vec![Access::Write(1)])]);
+        let batch1 = runtime.schedule(1, vec![Tx(1, vec![Access::Write(1)])]);
         batch1.wait_committed_blocking();
 
         // Schedule batches that access different resources
-        let batch2 = runtime.schedule(vec![Tx(2, vec![Access::Write(100)])]);
-        let batch3 = runtime.schedule(vec![Tx(3, vec![Access::Write(200)])]);
+        let batch2 = runtime.schedule(2, vec![Tx(2, vec![Access::Write(100)])]);
+        let batch3 = runtime.schedule(3, vec![Tx(3, vec![Access::Write(200)])]);
 
         // Rollback immediately - batch2 and batch3 should be canceled
         runtime.rollback_to(1);
@@ -471,20 +494,23 @@ pub fn test_rollback_interleaved_multi_resource() {
         );
 
         // Batch 1: Write to resources 1 and 2
-        runtime.schedule(vec![Tx(10, vec![Access::Write(1)]), Tx(11, vec![Access::Write(2)])]);
+        runtime.schedule(1, vec![Tx(10, vec![Access::Write(1)]), Tx(11, vec![Access::Write(2)])]);
 
         // Batch 2: Write to resources 2 and 3
-        runtime.schedule(vec![Tx(20, vec![Access::Write(2)]), Tx(21, vec![Access::Write(3)])]);
+        runtime.schedule(2, vec![Tx(20, vec![Access::Write(2)]), Tx(21, vec![Access::Write(3)])]);
 
         // Batch 3: Write to resources 1 and 3
-        runtime.schedule(vec![Tx(30, vec![Access::Write(1)]), Tx(31, vec![Access::Write(3)])]);
+        runtime.schedule(3, vec![Tx(30, vec![Access::Write(1)]), Tx(31, vec![Access::Write(3)])]);
 
         // Batch 4: Write to all resources
-        let batch4 = runtime.schedule(vec![
-            Tx(40, vec![Access::Write(1)]),
-            Tx(41, vec![Access::Write(2)]),
-            Tx(42, vec![Access::Write(3)]),
-        ]);
+        let batch4 = runtime.schedule(
+            4,
+            vec![
+                Tx(40, vec![Access::Write(1)]),
+                Tx(41, vec![Access::Write(2)]),
+                Tx(42, vec![Access::Write(3)]),
+            ],
+        );
         batch4.wait_committed_blocking();
 
         // Verify state before rollback
@@ -502,10 +528,13 @@ pub fn test_rollback_interleaved_multi_resource() {
             .assert_written_state(3, vec![21]); // Only from batch 2
 
         // Add new batches after rollback
-        let batch5 = runtime.schedule(vec![
-            Tx(50, vec![Access::Write(1)]),
-            Tx(51, vec![Access::Write(4)]), // New resource 4
-        ]);
+        let batch5 = runtime.schedule(
+            5,
+            vec![
+                Tx(50, vec![Access::Write(1)]),
+                Tx(51, vec![Access::Write(4)]), // New resource 4
+            ],
+        );
         batch5.wait_committed_blocking();
 
         // Verify mixed state
@@ -539,7 +568,7 @@ pub fn test_resource_eviction() {
             let txs: Vec<_> = (0..RESOURCES_PER_BATCH)
                 .map(|i| Tx(base_resource + i, vec![Access::Write(base_resource + i)]))
                 .collect();
-            batches.push(runtime.schedule(txs));
+            batches.push(runtime.schedule((batch_idx + 1) as u64, txs));
         }
 
         for batch in &batches {
@@ -581,7 +610,10 @@ pub fn test_eviction_under_load() {
             let batches: Vec<_> = (0..BATCHES_PER_WAVE)
                 .map(|i| {
                     let resource_id = base + i;
-                    runtime.schedule(vec![Tx(resource_id, vec![Access::Write(resource_id)])])
+                    runtime.schedule(
+                        (base + i + 1) as u64,
+                        vec![Tx(resource_id, vec![Access::Write(resource_id)])],
+                    )
                 })
                 .collect();
 
@@ -610,43 +642,43 @@ pub fn test_basic_pruning() {
         );
 
         // Create batches that write to resources (generates rollback pointers)
-        let batch1 = runtime.schedule(vec![Tx(1, vec![Access::Write(1)])]);
-        let batch2 = runtime.schedule(vec![Tx(2, vec![Access::Write(1)])]);
-        let batch3 = runtime.schedule(vec![Tx(3, vec![Access::Write(1)])]);
+        let batch1 = runtime.schedule(1, vec![Tx(1, vec![Access::Write(1)])]);
+        let batch2 = runtime.schedule(2, vec![Tx(2, vec![Access::Write(1)])]);
+        let batch3 = runtime.schedule(3, vec![Tx(3, vec![Access::Write(1)])]);
         batch3.wait_committed_blocking();
 
         // Verify rollback pointers exist for batches 2 and 3
-        let store = runtime.storage_manager().store();
+        let store = runtime.storage().store();
         assert_eq!(
-            StatePtrRollback::iter_batch(store.as_ref(), batch2.index()).count(),
+            StatePtrRollback::iter_batch(store.as_ref(), batch2.checkpoint().index()).count(),
             1,
             "Batch 2 should have rollback pointer"
         );
         assert_eq!(
-            StatePtrRollback::iter_batch(store.as_ref(), batch3.index()).count(),
+            StatePtrRollback::iter_batch(store.as_ref(), batch3.checkpoint().index()).count(),
             1,
             "Batch 3 should have rollback pointer"
         );
 
         // Set pruning threshold to batch 3 (prune batches 1 and 2)
-        runtime.set_pruning_threshold(batch3.index());
-        runtime.wait_pruned(batch2.index(), Duration::from_secs(10));
+        runtime.pruning().set_threshold(batch3.checkpoint().index());
+        runtime.wait_pruned(batch2.checkpoint().index(), Duration::from_secs(10));
 
         // Verify rollback pointers for batches 1 and 2 are deleted
         assert_eq!(
-            StatePtrRollback::iter_batch(store.as_ref(), batch1.index()).count(),
+            StatePtrRollback::iter_batch(store.as_ref(), batch1.checkpoint().index()).count(),
             0,
             "Batch 1 rollback pointers should be pruned"
         );
         assert_eq!(
-            StatePtrRollback::iter_batch(store.as_ref(), batch2.index()).count(),
+            StatePtrRollback::iter_batch(store.as_ref(), batch2.checkpoint().index()).count(),
             0,
             "Batch 2 rollback pointers should be pruned"
         );
 
         // Batch 3 should still have its rollback pointer (not pruned)
         assert_eq!(
-            StatePtrRollback::iter_batch(store.as_ref(), batch3.index()).count(),
+            StatePtrRollback::iter_batch(store.as_ref(), batch3.checkpoint().index()).count(),
             1,
             "Batch 3 rollback pointer should NOT be pruned"
         );
@@ -673,11 +705,11 @@ pub fn test_pruning_preserves_recent_batches() {
 
         // Create 5 batches, each overwriting the same resource
         for i in 1..=5 {
-            let batch = runtime.schedule(vec![Tx(i, vec![Access::Write(1)])]);
+            let batch = runtime.schedule(i as u64, vec![Tx(i, vec![Access::Write(1)])]);
             batch.wait_committed_blocking();
         }
 
-        let store = runtime.storage_manager().store();
+        let store = runtime.storage().store();
 
         // Verify all batches 2-5 have rollback pointers
         for batch_idx in 2..=5 {
@@ -690,7 +722,7 @@ pub fn test_pruning_preserves_recent_batches() {
         }
 
         // Prune batches 1-3 (threshold = 4 means batches < 4 are eligible)
-        runtime.set_pruning_threshold(4);
+        runtime.pruning().set_threshold(4);
         runtime.wait_pruned(3, Duration::from_secs(10));
 
         // Batches 1-3 should be pruned
@@ -734,20 +766,18 @@ pub fn test_pruning_crash_recovery() {
         );
 
         for i in 1..=5 {
-            let batch = runtime.schedule(vec![Tx(i, vec![Access::Write(1)])]);
+            let batch = runtime.schedule(i as u64, vec![Tx(i, vec![Access::Write(1)])]);
             batch.wait_committed_blocking();
         }
 
         // Prune batches 1-2
-        runtime.set_pruning_threshold(3);
+        runtime.pruning().set_threshold(3);
         runtime.wait_pruned(2, Duration::from_secs(10));
 
-        // Verify last_pruned_index is persisted
-        assert_eq!(
-            StateMetadata::get_last_pruned_index(runtime.storage_manager().store().as_ref()),
-            Some(2),
-            "Last pruned index should be persisted"
-        );
+        // Verify last_pruned is persisted with correct metadata
+        let pruned = StateMetadata::last_pruned::<u64, _>(&**runtime.storage().store());
+        assert_eq!(pruned.index(), 2, "Last pruned index should be persisted");
+        assert_eq!(*pruned.metadata(), 2, "Last pruned metadata should be persisted");
 
         runtime.shutdown();
     }
@@ -760,9 +790,11 @@ pub fn test_pruning_crash_recovery() {
             StorageConfig::default().with_store(storage),
         );
 
-        assert_eq!(runtime.last_pruned_index(), 2, "Pruning should resume from persisted index");
+        let pruned = runtime.pruning().last_pruned();
+        assert_eq!(pruned.index(), 2, "Pruning should resume from persisted index");
+        assert_eq!(*pruned.metadata(), 2, "Pruning metadata should survive restart");
 
-        let store = runtime.storage_manager().store();
+        let store = runtime.storage().store();
 
         // Batches 1-2 should still be pruned
         for batch_idx in 1..=2 {
@@ -785,7 +817,7 @@ pub fn test_pruning_crash_recovery() {
         }
 
         // Continue pruning from where we left off
-        runtime.set_pruning_threshold(5);
+        runtime.pruning().set_threshold(5);
         runtime.wait_pruned(4, Duration::from_secs(10));
 
         // Batches 3-4 should now be pruned
@@ -823,62 +855,71 @@ pub fn test_pruning_multiple_resources() {
         );
 
         // Batch 1: Create resources 1, 2, 3
-        let batch1 = runtime.schedule(vec![
-            Tx(1, vec![Access::Write(1)]),
-            Tx(2, vec![Access::Write(2)]),
-            Tx(3, vec![Access::Write(3)]),
-        ]);
+        let batch1 = runtime.schedule(
+            1,
+            vec![
+                Tx(1, vec![Access::Write(1)]),
+                Tx(2, vec![Access::Write(2)]),
+                Tx(3, vec![Access::Write(3)]),
+            ],
+        );
         batch1.wait_committed_blocking();
 
         // Batch 2: Overwrite all three resources
-        let batch2 = runtime.schedule(vec![
-            Tx(10, vec![Access::Write(1)]),
-            Tx(20, vec![Access::Write(2)]),
-            Tx(30, vec![Access::Write(3)]),
-        ]);
+        let batch2 = runtime.schedule(
+            2,
+            vec![
+                Tx(10, vec![Access::Write(1)]),
+                Tx(20, vec![Access::Write(2)]),
+                Tx(30, vec![Access::Write(3)]),
+            ],
+        );
         batch2.wait_committed_blocking();
 
         // Batch 3: Overwrite all three resources again
-        let batch3 = runtime.schedule(vec![
-            Tx(100, vec![Access::Write(1)]),
-            Tx(200, vec![Access::Write(2)]),
-            Tx(300, vec![Access::Write(3)]),
-        ]);
+        let batch3 = runtime.schedule(
+            3,
+            vec![
+                Tx(100, vec![Access::Write(1)]),
+                Tx(200, vec![Access::Write(2)]),
+                Tx(300, vec![Access::Write(3)]),
+            ],
+        );
         batch3.wait_committed_blocking();
 
-        let store = runtime.storage_manager().store();
+        let store = runtime.storage().store();
 
         // Batch 2 and 3 should have 3 rollback pointers each
         assert_eq!(
-            StatePtrRollback::iter_batch(store.as_ref(), batch2.index()).count(),
+            StatePtrRollback::iter_batch(store.as_ref(), batch2.checkpoint().index()).count(),
             3,
             "Batch 2 should have 3 rollback pointers"
         );
         assert_eq!(
-            StatePtrRollback::iter_batch(store.as_ref(), batch3.index()).count(),
+            StatePtrRollback::iter_batch(store.as_ref(), batch3.checkpoint().index()).count(),
             3,
             "Batch 3 should have 3 rollback pointers"
         );
 
         // Prune batch 1 and 2
-        runtime.set_pruning_threshold(batch3.index());
-        runtime.wait_pruned(batch2.index(), Duration::from_secs(10));
+        runtime.pruning().set_threshold(batch3.checkpoint().index());
+        runtime.wait_pruned(batch2.checkpoint().index(), Duration::from_secs(10));
 
         // All rollback pointers for batches 1 and 2 should be deleted
         assert_eq!(
-            StatePtrRollback::iter_batch(store.as_ref(), batch1.index()).count(),
+            StatePtrRollback::iter_batch(store.as_ref(), batch1.checkpoint().index()).count(),
             0,
             "Batch 1 should have no rollback pointers after pruning"
         );
         assert_eq!(
-            StatePtrRollback::iter_batch(store.as_ref(), batch2.index()).count(),
+            StatePtrRollback::iter_batch(store.as_ref(), batch2.checkpoint().index()).count(),
             0,
             "Batch 2 should have no rollback pointers after pruning"
         );
 
         // Batch 3 should still have its rollback pointers
         assert_eq!(
-            StatePtrRollback::iter_batch(store.as_ref(), batch3.index()).count(),
+            StatePtrRollback::iter_batch(store.as_ref(), batch3.checkpoint().index()).count(),
             3,
             "Batch 3 should still have 3 rollback pointers"
         );
