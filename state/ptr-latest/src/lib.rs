@@ -5,8 +5,8 @@ use vprogs_storage_types::{ReadStore, WriteBatch};
 /// Provides type-safe operations for the LatestPtr column family.
 ///
 /// StatePtrLatest maps resource IDs to their current version number.
-/// Key layout: `resource_id.to_bytes()`
-/// Value layout: `version.to_be_bytes()` (u64)
+/// Key layout: `resource_id (borsh)`
+/// Value layout: `version (u64 BE)`
 pub struct StatePtrLatest;
 
 impl StatePtrLatest {
@@ -16,26 +16,29 @@ impl StatePtrLatest {
         S: ReadStore<StateSpace = StateSpace>,
         R: ResourceId,
     {
+        let key = borsh::to_vec(resource_id).expect("failed to serialize ResourceId");
         store
-            .get(StateSpace::StatePtrLatest, &resource_id.to_bytes())
+            .get(StateSpace::StatePtrLatest, &key)
             .map(|bytes| u64::from_be_bytes(bytes[..8].try_into().unwrap()))
     }
 
     /// Sets the current version for a resource.
-    pub fn put<W, R>(store: &mut W, resource_id: &R, version: u64)
+    pub fn put<W, R>(wb: &mut W, resource_id: &R, version: u64)
     where
         W: WriteBatch<StateSpace = StateSpace>,
         R: ResourceId,
     {
-        store.put(StateSpace::StatePtrLatest, &resource_id.to_bytes(), &version.to_be_bytes());
+        let key = borsh::to_vec(resource_id).expect("failed to serialize ResourceId");
+        wb.put(StateSpace::StatePtrLatest, &key, &version.to_be_bytes());
     }
 
     /// Deletes the latest pointer for a resource.
-    pub fn delete<W, R>(store: &mut W, resource_id: &R)
+    pub fn delete<W, R>(wb: &mut W, resource_id: &R)
     where
         W: WriteBatch<StateSpace = StateSpace>,
         R: ResourceId,
     {
-        store.delete(StateSpace::StatePtrLatest, &resource_id.to_bytes());
+        let key = borsh::to_vec(resource_id).expect("failed to serialize ResourceId");
+        wb.delete(StateSpace::StatePtrLatest, &key);
     }
 }

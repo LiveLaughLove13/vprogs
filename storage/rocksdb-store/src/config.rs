@@ -70,6 +70,10 @@ pub trait Config: Send + Sync + 'static {
         })
     }
 
+    fn cf_batch_metadata_opts() -> Options {
+        Options::default()
+    }
+
     fn cf_metas_opts() -> Options {
         Options::default()
     }

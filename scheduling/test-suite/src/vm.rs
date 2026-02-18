@@ -23,17 +23,20 @@ impl VmInterface for VM {
         Ok(())
     }
 
-    fn notarize_batch<S: Store<StateSpace = StateSpace>>(&self, batch: &RuntimeBatch<S, Self>) {
-        eprintln!(
-            ">> Processed batch with {} transactions and {} state changes",
-            batch.txs().len(),
-            batch.state_diffs().len()
-        );
+    fn post_process_batch<S: Store<StateSpace = StateSpace>>(&self, batch: &RuntimeBatch<S, Self>) {
+        if !batch.was_canceled() {
+            eprintln!(
+                ">> Processed batch with {} transactions and {} state changes",
+                batch.txs().len(),
+                batch.state_diffs().len()
+            );
+        }
     }
 
     type Transaction = Tx;
     type TransactionEffects = ();
     type ResourceId = usize;
     type AccessMetadata = Access;
+    type BatchMetadata = u64;
     type Error = ();
 }

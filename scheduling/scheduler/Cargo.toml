@@ -5,15 +5,18 @@ version.workspace = true
 
 [dependencies]
 arc-swap.workspace                            = true
+borsh.workspace                               = true
 crossbeam-deque.workspace                     = true
 crossbeam-queue.workspace                     = true
 num_cpus.workspace                            = true
 tap.workspace                                 = true
+thiserror.workspace                           = true
 tokio.workspace                               = true
 vprogs-core-atomics.workspace                 = true
 vprogs-core-macros.workspace                  = true
 vprogs-core-types.workspace                   = true
 vprogs-scheduling-execution-workers.workspace = true
+vprogs-state-batch-metadata.workspace         = true
 vprogs-state-metadata.workspace               = true
 vprogs-state-ptr-latest.workspace             = true
 vprogs-state-ptr-rollback.workspace           = true

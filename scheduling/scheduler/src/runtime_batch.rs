@@ -7,19 +7,23 @@ use crossbeam_deque::{Injector, Steal, Worker};
 use crossbeam_queue::SegQueue;
 use vprogs_core_atomics::AtomicAsyncLatch;
 use vprogs_core_macros::smart_pointer;
+use vprogs_core_types::Checkpoint;
+use vprogs_state_batch_metadata::BatchMetadata as StoredBatchMetadata;
+use vprogs_state_metadata::StateMetadata;
 use vprogs_state_space::StateSpace;
 use vprogs_storage_manager::StorageManager;
 use vprogs_storage_types::{Store, WriteBatch};
 
 use crate::{
-    Read, RuntimeContext, RuntimeTx, Scheduler, StateDiff, Write, cpu_task::ManagerTask,
+    CancellationContext, Read, RuntimeTx, Scheduler, StateDiff, Write, cpu_task::ManagerTask,
     vm_interface::VmInterface,
 };
 
 #[smart_pointer]
 pub struct RuntimeBatch<S: Store<StateSpace = StateSpace>, V: VmInterface> {
-    runtime_context: RuntimeContext,
-    index: u64,
+    cancellation: CancellationContext,
+    commit_frontier: Arc<AtomicU64>,
+    checkpoint: Checkpoint<V::BatchMetadata>,
     storage: StorageManager<S, Read<S, V>, Write<S, V>>,
     eviction_queue: Arc<SegQueue<V::ResourceId>>,
     txs: Vec<RuntimeTx<S, V>>,
@@ -33,8 +37,8 @@ pub struct RuntimeBatch<S: Store<StateSpace = StateSpace>, V: VmInterface> {
 }
 
 impl<S: Store<StateSpace = StateSpace>, V: VmInterface> RuntimeBatch<S, V> {
-    pub fn index(&self) -> u64 {
-        self.index
+    pub fn checkpoint(&self) -> &Checkpoint<V::BatchMetadata> {
+        &self.checkpoint
     }
 
     pub fn txs(&self) -> &[RuntimeTx<S, V>] {
@@ -54,7 +58,7 @@ impl<S: Store<StateSpace = StateSpace>, V: VmInterface> RuntimeBatch<S, V> {
     }
 
     pub fn was_canceled(&self) -> bool {
-        self.index > self.runtime_context.cancel_threshold()
+        self.checkpoint.index() > self.cancellation.threshold()
     }
 
     pub fn was_processed(&self) -> bool {
@@ -108,14 +112,22 @@ impl<S: Store<StateSpace = StateSpace>, V: VmInterface> RuntimeBatch<S, V> {
         self
     }
 
-    pub(crate) fn new(vm: V, manager: &mut Scheduler<S, V>, txs: Vec<V::Transaction>) -> Self {
+    pub(crate) fn new(
+        vm: V,
+        manager: &mut Scheduler<S, V>,
+        txs: Vec<V::Transaction>,
+        checkpoint: Checkpoint<V::BatchMetadata>,
+        cancellation: CancellationContext,
+        commit_frontier: Arc<AtomicU64>,
+    ) -> Self {
         Self(Arc::new_cyclic(|this| {
             let mut state_diffs = Vec::new();
-            let runtime_context = manager.context().clone();
 
             RuntimeBatchData {
-                index: runtime_context.next_batch_index(),
-                storage: manager.storage_manager().clone(),
+                checkpoint,
+                cancellation,
+                commit_frontier,
+                storage: manager.storage().clone(),
                 eviction_queue: manager.eviction_queue(),
                 pending_txs: AtomicU64::new(txs.len() as u64),
                 pending_writes: AtomicI64::new(0),
@@ -132,7 +144,6 @@ impl<S: Store<StateSpace = StateSpace>, V: VmInterface> RuntimeBatch<S, V> {
                     })
                     .collect(),
                 state_diffs,
-                runtime_context,
                 available_txs: Injector::new(),
                 was_processed: Default::default(),
                 was_persisted: Default::default(),
@@ -187,18 +198,25 @@ impl<S: Store<StateSpace = StateSpace>, V: VmInterface> RuntimeBatch<S, V> {
         }
     }
 
-    pub(crate) fn commit<W>(&self, store: &mut W)
+    pub(crate) fn commit<W>(&self, wb: &mut W)
     where
         W: WriteBatch<StateSpace = StateSpace>,
     {
         if !self.was_canceled() {
             for state_diff in self.state_diffs() {
-                state_diff.written_state().write_latest_ptr(store);
+                state_diff.written_state().write_latest_ptr(wb);
             }
+            StoredBatchMetadata::set(wb, self.checkpoint.index(), self.checkpoint.metadata());
+            StateMetadata::set_last_committed(wb, &self.checkpoint);
         }
     }
 
     pub(crate) fn commit_done(self) {
+        // Advance the commit frontier only for non-canceled batches.
+        if !self.was_canceled() {
+            self.commit_frontier.fetch_max(self.checkpoint.index(), Ordering::Release);
+        }
+
         // Mark the batch as committed.
         self.was_committed.open();
 
