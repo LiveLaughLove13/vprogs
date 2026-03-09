@@ -14,12 +14,12 @@
 //!
 //! # async fn example() {
 //! // Start an isolated simnet node.
-//! let node = L1Node::new().await;
+//! let node = L1Node::new(None).await;
 //!
 //! // Connect a bridge to it.
 //! let bridge = L1Bridge::new(
 //!     L1BridgeConfig::default()
-//!         .with_url(node.wrpc_borsh_url())
+//!         .with_url(Some(node.wrpc_borsh_url()))
 //!         .with_network_type(NetworkType::Simnet),
 //! );
 //!
@@ -41,6 +41,8 @@
 
 mod l1_bridge_ext;
 mod l1_node;
+mod node_ext;
+mod vm;
 
 pub use kaspa_consensus_core::{
     network::{NetworkId, NetworkType},
@@ -48,3 +50,6 @@ pub use kaspa_consensus_core::{
 };
 pub use l1_bridge_ext::L1BridgeExt;
 pub use l1_node::L1Node;
+pub use node_ext::NodeExt;
+pub use vm::TestNodeVm;
+pub use vprogs_scheduling_test_suite::{Access, Tx};

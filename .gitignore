@@ -30,5 +30,10 @@ target
 #  AI tool files
 CLAUDE.md
 
+<<<<<<< HEAD
 # Environment variables (contains sensitive data like private keys)
 .env
+=======
+# Node data directory
+.data/
+>>>>>>> upstream/master

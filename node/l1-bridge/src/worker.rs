@@ -20,8 +20,8 @@ use crate::{
     ChainBlockMetadata, L1BridgeConfig, L1Event,
 };
 
-/// Runs inside a dedicated thread and communicates with the L1 node over RPC.
-/// Pushes [`L1Event`]s to a shared queue for the [`L1Bridge`] consumer.
+/// Runs inside a dedicated thread and communicates with the L1 node over RPC. Pushes [`L1Event`]s
+/// to a shared queue for the [`L1Bridge`] consumer.
 pub(crate) struct BridgeWorker {
     /// RPC client for L1 communication.
     client: Arc<KaspaRpcClient>,
@@ -118,7 +118,7 @@ impl BridgeWorker {
             rpc_ctl_channel,
             fatal: false,
             backfill_target,
-            reorg_filter: ReorgFilter::new(config.reorg_filter_halving_period),
+            reorg_filter: ReorgFilter::new(config.filter_half_life),
         }
         .run()
         .await;

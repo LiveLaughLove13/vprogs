@@ -20,9 +20,9 @@ pub struct L1BridgeConfig {
     pub root: Option<Checkpoint<ChainBlockMetadata>>,
     /// Last known tip, or `None` to start from the L1 pruning point.
     pub tip: Option<Checkpoint<ChainBlockMetadata>>,
-    /// Reorg filter halving period. Observed reorg depths accumulate into a threshold that halves
-    /// every period until it reaches zero. Set to `Duration::ZERO` to disable (default).
-    pub reorg_filter_halving_period: Duration,
+    /// Reorg filter half-life. Observed reorg depths accumulate into a threshold that halves
+    /// every half-life until it decays to zero. Set to `Duration::ZERO` to disable.
+    pub filter_half_life: Duration,
 }
 
 impl Default for L1BridgeConfig {
@@ -35,15 +35,15 @@ impl Default for L1BridgeConfig {
             connect_strategy: ConnectStrategy::Retry, // Reconnect automatically on disconnect.
             root: None,                               // Start from the L1 pruning point.
             tip: None,
-            reorg_filter_halving_period: Duration::ZERO, // Disabled by default.
+            filter_half_life: Duration::from_secs(3600), // 1 hour.
         }
     }
 }
 
 impl L1BridgeConfig {
     /// Sets the WebSocket URL for the L1 node.
-    pub fn with_url(mut self, url: impl Into<String>) -> Self {
-        self.url = Some(url.into());
+    pub fn with_url(mut self, url: Option<impl Into<String>>) -> Self {
+        self.url = url.map(Into::into);
         self
     }
 
@@ -83,10 +83,10 @@ impl L1BridgeConfig {
         self
     }
 
-    /// Sets the reorg filter halving period. Observed reorg depths accumulate into a threshold that
-    /// halves every period, filtering smaller reorgs until the threshold decays to zero.
-    pub fn with_reorg_filter_halving_period(mut self, period: Duration) -> Self {
-        self.reorg_filter_halving_period = period;
+    /// Sets the reorg filter half-life. Observed reorg depths accumulate into a threshold that
+    /// halves every half-life, filtering smaller reorgs until the threshold decays to zero.
+    pub fn with_filter_half_life(mut self, half_life: Duration) -> Self {
+        self.filter_half_life = half_life;
         self
     }
 }

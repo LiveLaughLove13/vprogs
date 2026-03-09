@@ -10,8 +10,8 @@ use vprogs_node_test_suite::{L1BridgeExt, L1Node};
 // Timeout for waiting for events.
 const TIMEOUT: Duration = Duration::from_secs(30);
 
-/// Verifies that the bridge receives block events with correct hashes,
-/// sequential indices, and chronological ordering after mining.
+/// Verifies that the bridge receives block events with correct hashes, sequential indices, and
+/// chronological ordering after mining.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_bridge_syncs_and_receives_block_events() {
     let (node, bridge) = setup_node_with_bridge(ConnectStrategy::Fallback, None).await;
@@ -47,8 +47,8 @@ async fn test_bridge_syncs_and_receives_block_events() {
     node.shutdown().await;
 }
 
-/// Verifies that block events include header fields (timestamp) and at least
-/// a coinbase transaction in the accepted set.
+/// Verifies that block events include header fields (timestamp) and at least a coinbase transaction
+/// in the accepted set.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_bridge_block_contains_transactions() {
     let (node, bridge) = setup_node_with_bridge(ConnectStrategy::Fallback, None).await;
@@ -79,11 +79,11 @@ async fn test_bridge_block_contains_transactions() {
     node.shutdown().await;
 }
 
-/// Verifies that a bridge started with a `tip` config picks up new blocks
-/// with indices continuing from the given starting point.
+/// Verifies that a bridge started with a `tip` config picks up new blocks with indices continuing
+/// from the given starting point.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_bridge_syncs_from_specific_block() {
-    let node = L1Node::new().await;
+    let node = L1Node::new(None).await;
 
     // Mine initial blocks that the bridge will skip over.
     let initial_hashes = node.mine_blocks(3).await;
@@ -91,9 +91,10 @@ async fn test_bridge_syncs_from_specific_block() {
 
     // Start bridge from the last mined block at index 3.
     let config = L1BridgeConfig::default()
-        .with_url(node.wrpc_borsh_url())
+        .with_url(Some(node.wrpc_borsh_url()))
         .with_network_type(NetworkType::Simnet)
         .with_connect_strategy(ConnectStrategy::Fallback)
+        .with_filter_half_life(Duration::ZERO)
         .with_tip(Some(Checkpoint::new(3, ChainBlockMetadata::new(start_from, 0))));
 
     let bridge = L1Bridge::new(config);
@@ -124,17 +125,18 @@ async fn test_bridge_syncs_from_specific_block() {
     node.shutdown().await;
 }
 
-/// Verifies that a new bridge started from a saved checkpoint catches up on
-/// blocks that were mined while no bridge was running.
+/// Verifies that a new bridge started from a saved checkpoint catches up on blocks that were mined
+/// while no bridge was running.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_bridge_catches_up_after_reconnection() {
-    let node = L1Node::new().await;
+    let node = L1Node::new(None).await;
 
     // Phase 1: First bridge receives some blocks.
     let config = L1BridgeConfig::default()
-        .with_url(node.wrpc_borsh_url())
+        .with_url(Some(node.wrpc_borsh_url()))
         .with_network_type(NetworkType::Simnet)
-        .with_connect_strategy(ConnectStrategy::Fallback);
+        .with_connect_strategy(ConnectStrategy::Fallback)
+        .with_filter_half_life(Duration::ZERO);
 
     let bridge1 = L1Bridge::new(config);
     bridge1.wait_for(TIMEOUT, |e| matches!(e, L1Event::Connected)).await;
@@ -165,9 +167,10 @@ async fn test_bridge_catches_up_after_reconnection() {
 
     // Phase 3: New bridge resumes from the checkpoint and catches up.
     let config = L1BridgeConfig::default()
-        .with_url(node.wrpc_borsh_url())
+        .with_url(Some(node.wrpc_borsh_url()))
         .with_network_type(NetworkType::Simnet)
         .with_connect_strategy(ConnectStrategy::Fallback)
+        .with_filter_half_life(Duration::ZERO)
         .with_tip(Some(checkpoint));
 
     let bridge2 = L1Bridge::new(config);
@@ -197,8 +200,8 @@ async fn test_bridge_catches_up_after_reconnection() {
     node.shutdown().await;
 }
 
-/// Verifies reorg handling when two isolated nodes with different chain
-/// lengths are connected. The shorter chain should reorg to the longer one.
+/// Verifies reorg handling when two isolated nodes with different chain lengths are connected. The
+/// shorter chain should reorg to the longer one.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_bridge_receives_reorg_events() {
     let (node0, bridge0) = setup_node_with_bridge(ConnectStrategy::Fallback, None).await;
@@ -288,29 +291,39 @@ async fn test_reorg_filter_causes_lag() {
     const SHORT_CHAIN: usize = 5;
     const LONG_CHAIN: usize = 20;
 
-    // Create two isolated nodes.
-    let node1 = L1Node::new().await;
-    let node2 = L1Node::new().await;
+    // Create two isolated nodes with bridges.
+    let node1 = L1Node::new(None).await;
+    let node2 = L1Node::new(None).await;
 
     // Two bridges to node1: one with reorg filter (1h period), one without.
     let filtered = L1Bridge::new(
         L1BridgeConfig::default()
-            .with_url(node1.wrpc_borsh_url())
+            .with_url(Some(node1.wrpc_borsh_url()))
             .with_network_type(NetworkType::Simnet)
             .with_connect_strategy(ConnectStrategy::Fallback)
-            .with_reorg_filter_halving_period(Duration::from_secs(3600)),
+            .with_filter_half_life(Duration::from_secs(3600)),
     );
     let unfiltered = L1Bridge::new(
         L1BridgeConfig::default()
-            .with_url(node1.wrpc_borsh_url())
+            .with_url(Some(node1.wrpc_borsh_url()))
             .with_network_type(NetworkType::Simnet)
-            .with_connect_strategy(ConnectStrategy::Fallback),
+            .with_connect_strategy(ConnectStrategy::Fallback)
+            .with_filter_half_life(Duration::ZERO),
+    );
+    // Bridge to node2 for waiting on block processing.
+    let node2_bridge = L1Bridge::new(
+        L1BridgeConfig::default()
+            .with_url(Some(node2.wrpc_borsh_url()))
+            .with_network_type(NetworkType::Simnet)
+            .with_connect_strategy(ConnectStrategy::Fallback)
+            .with_filter_half_life(Duration::ZERO),
     );
 
-    // Wait for both bridges to connect.
+    // Wait for all bridges to connect.
     tokio::join!(
         filtered.wait_for(TIMEOUT, |e| matches!(e, L1Event::Connected)),
         unfiltered.wait_for(TIMEOUT, |e| matches!(e, L1Event::Connected)),
+        node2_bridge.wait_for(TIMEOUT, |e| matches!(e, L1Event::Connected)),
     );
 
     // Mine the short chain on node1 and wait for both bridges to sync.
@@ -326,10 +339,16 @@ async fn test_reorg_filter_causes_lag() {
         }),
     );
 
-    // Mine the longer chain on node2, then connect to trigger a reorg.
+    // Mine the longer chain on node2 and wait for it to be fully processed.
     let long_hashes = node2.mine_blocks(LONG_CHAIN).await;
     let long_tip = *long_hashes.last().unwrap();
+    node2_bridge
+        .wait_for(TIMEOUT, |e| {
+            matches!(e, L1Event::ChainBlockAdded { header, .. } if header.hash == Some(long_tip))
+        })
+        .await;
 
+    // Connect to trigger a reorg.
     node1.connect_to(&node2).await;
 
     // Wait for the unfiltered bridge to fully sync to the new chain.
@@ -375,6 +394,7 @@ async fn test_reorg_filter_causes_lag() {
 
     filtered.shutdown();
     unfiltered.shutdown();
+    node2_bridge.shutdown();
     node1.shutdown().await;
     node2.shutdown().await;
 }
@@ -384,12 +404,13 @@ async fn setup_node_with_bridge(
     strategy: ConnectStrategy,
     tip: Option<Checkpoint<ChainBlockMetadata>>,
 ) -> (L1Node, L1Bridge) {
-    let node = L1Node::new().await;
+    let node = L1Node::new(None).await;
 
     let config = L1BridgeConfig::default()
-        .with_url(node.wrpc_borsh_url())
+        .with_url(Some(node.wrpc_borsh_url()))
         .with_network_type(NetworkType::Simnet)
         .with_connect_strategy(strategy)
+        .with_filter_half_life(Duration::ZERO)
         .with_tip(tip);
 
     let bridge = L1Bridge::new(config);
@@ -400,8 +421,8 @@ async fn setup_node_with_bridge(
     (node, bridge)
 }
 
-/// Unwraps a list of events into `ChainBlockAdded` tuples.
-/// Panics if any event is not `ChainBlockAdded`.
+/// Unwraps a list of events into `ChainBlockAdded` tuples. Panics if any event is not
+/// `ChainBlockAdded`.
 fn unwrap_chain_blocks(
     events: Vec<L1Event>,
 ) -> Vec<(u64, Box<RpcOptionalHeader>, Vec<RpcOptionalTransaction>)> {
