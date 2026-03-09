@@ -6,7 +6,7 @@ use vprogs_state_space::StateSpace;
 use vprogs_state_version::StateVersion;
 use vprogs_storage_types::{Store, WriteBatch};
 
-use crate::{RuntimeBatchRef, Write, vm_interface::VmInterface};
+use crate::{vm_interface::VmInterface, RuntimeBatchRef, Write};
 
 #[smart_pointer]
 pub struct StateDiff<S: Store<StateSpace = StateSpace>, V: VmInterface> {

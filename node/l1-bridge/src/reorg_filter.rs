@@ -39,7 +39,11 @@ impl ReorgFilter {
             self.next_halving = if self.threshold == 0 { None } else { Some(expiry) };
         }
 
-        if self.threshold == 0 { None } else { Some(self.threshold) }
+        if self.threshold == 0 {
+            None
+        } else {
+            Some(self.threshold)
+        }
     }
 
     /// Records a reorg of the given depth, adding it to the threshold and resetting the halving

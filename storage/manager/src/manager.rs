@@ -1,12 +1,12 @@
 use std::sync::{
-    Arc,
     atomic::{AtomicBool, Ordering},
+    Arc,
 };
 
 use vprogs_core_macros::smart_pointer;
 use vprogs_storage_types::Store;
 
-use crate::{ReadCmd, StorageConfig, WriteCmd, read::ReadManager, write::WriteManager};
+use crate::{read::ReadManager, write::WriteManager, ReadCmd, StorageConfig, WriteCmd};
 
 #[smart_pointer]
 pub struct StorageManager<S: Store, R: ReadCmd<S::StateSpace>, W: WriteCmd<S::StateSpace>> {

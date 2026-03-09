@@ -1,12 +1,12 @@
 use std::{sync::Arc, time::Duration};
 
 use crossbeam_queue::SegQueue;
-use futures::{FutureExt, select_biased};
+use futures::{select_biased, FutureExt};
 use kaspa_notify::scope::{PruningPointUtxoSetOverrideScope, Scope, VirtualChainChangedScope};
 use kaspa_rpc_core::{
+    api::{ctl::RpcState, rpc::RpcApi},
     GetVirtualChainFromBlockV2Response, Notification,
     RpcDataVerbosityLevel::{High, Low},
-    api::{ctl::RpcState, rpc::RpcApi},
 };
 use kaspa_wrpc_client::prelude::*;
 use tokio::sync::Notify;
@@ -14,10 +14,10 @@ use vprogs_core_types::Checkpoint;
 use workflow_core::channel::{Channel, MultiplexerChannel};
 
 use crate::{
-    ChainBlockMetadata, L1BridgeConfig, L1Event,
     error::{Error, Result},
     reorg_filter::ReorgFilter,
     virtual_chain::VirtualChain,
+    ChainBlockMetadata, L1BridgeConfig, L1Event,
 };
 
 /// Runs inside a dedicated thread and communicates with the L1 node over RPC.

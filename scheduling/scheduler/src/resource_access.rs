@@ -1,6 +1,6 @@
 use std::sync::{
-    Arc,
     atomic::{AtomicBool, Ordering},
+    Arc,
 };
 
 use arc_swap::ArcSwapOption;
@@ -11,7 +11,7 @@ use vprogs_state_version::StateVersion;
 use vprogs_storage_manager::StorageManager;
 use vprogs_storage_types::{ReadStore, Store};
 
-use crate::{Read, RuntimeTxRef, StateDiff, Write, vm_interface::VmInterface};
+use crate::{vm_interface::VmInterface, Read, RuntimeTxRef, StateDiff, Write};
 
 #[smart_pointer(deref(metadata))]
 pub struct ResourceAccess<S: Store<StateSpace = StateSpace>, V: VmInterface> {

@@ -1,19 +1,19 @@
 use std::{
     sync::{
-        Arc,
         atomic::{AtomicBool, Ordering},
+        Arc,
     },
     thread,
     time::Instant,
 };
 
-use crossbeam_utils::{CachePadded, sync::Parker};
+use crossbeam_utils::{sync::Parker, CachePadded};
 use vprogs_storage_types::Store;
 
 use crate::{
-    WriteCmd,
     utils::{CmdQueue, WorkerHandle},
     write::WriteConfig,
+    WriteCmd,
 };
 
 pub struct WriteWorker<K: Store, W: WriteCmd<K::StateSpace>> {

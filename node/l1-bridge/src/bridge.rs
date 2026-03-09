@@ -3,7 +3,7 @@ use std::{sync::Arc, thread::JoinHandle};
 use crossbeam_queue::SegQueue;
 use tokio::{runtime::Builder, sync::Notify};
 
-use crate::{L1BridgeConfig, L1Event, worker::BridgeWorker};
+use crate::{worker::BridgeWorker, L1BridgeConfig, L1Event};
 
 /// Bridge to the Kaspa L1 network that emits chain events.
 ///

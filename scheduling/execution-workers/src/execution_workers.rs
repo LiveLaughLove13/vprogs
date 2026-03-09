@@ -1,6 +1,6 @@
 use std::thread::JoinHandle;
 
-use crate::{Batch, WorkersApi, task::Task};
+use crate::{task::Task, Batch, WorkersApi};
 
 pub struct ExecutionWorkers<T: Task, B: Batch<T>> {
     workers: WorkersApi<T, B>,

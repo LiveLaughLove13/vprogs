@@ -7,7 +7,7 @@ use tap::Tap;
 use vprogs_core_atomics::AtomicAsyncLatch;
 use vprogs_core_macros::smart_pointer;
 
-use crate::{Batch, Worker, task::Task};
+use crate::{task::Task, Batch, Worker};
 
 #[smart_pointer]
 pub struct WorkersApi<T: Task, B: Batch<T>> {

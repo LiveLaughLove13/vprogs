@@ -1,6 +1,6 @@
 use std::sync::{
-    Arc,
     atomic::{AtomicU64, Ordering},
+    Arc,
 };
 
 use vprogs_core_macros::smart_pointer;

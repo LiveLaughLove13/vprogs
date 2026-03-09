@@ -1,8 +1,8 @@
 use std::{
     marker::PhantomData,
     sync::{
-        Arc,
         atomic::{AtomicBool, AtomicUsize, Ordering},
+        Arc,
     },
 };
 
@@ -10,9 +10,9 @@ use crossbeam_utils::CachePadded;
 use vprogs_storage_types::Store;
 
 use crate::{
-    ReadCmd,
     read::{ReadConfig, ReadWorker},
     utils::{CmdQueue, WorkerHandle},
+    ReadCmd,
 };
 
 pub struct ReadManager<K: Store, R: ReadCmd<K::StateSpace>> {

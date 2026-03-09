@@ -1,6 +1,6 @@
 use std::sync::{
-    Arc,
     atomic::{AtomicI64, AtomicU64, Ordering},
+    Arc,
 };
 
 use crossbeam_deque::{Injector, Steal, Worker};
@@ -15,8 +15,8 @@ use vprogs_storage_manager::StorageManager;
 use vprogs_storage_types::{Store, WriteBatch};
 
 use crate::{
-    CancellationContext, Read, RuntimeTx, Scheduler, StateDiff, Write, cpu_task::ManagerTask,
-    vm_interface::VmInterface,
+    cpu_task::ManagerTask, vm_interface::VmInterface, CancellationContext, Read, RuntimeTx,
+    Scheduler, StateDiff, Write,
 };
 
 #[smart_pointer]

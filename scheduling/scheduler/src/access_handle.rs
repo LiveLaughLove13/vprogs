@@ -5,7 +5,7 @@ use vprogs_state_space::StateSpace;
 use vprogs_state_version::StateVersion;
 use vprogs_storage_types::Store;
 
-use crate::{ResourceAccess, vm_interface::VmInterface};
+use crate::{vm_interface::VmInterface, ResourceAccess};
 
 pub struct AccessHandle<'a, S: Store<StateSpace = StateSpace>, V: VmInterface> {
     state_version: Arc<StateVersion<V::ResourceId>>,

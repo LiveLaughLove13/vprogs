@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use kaspa_addresses::Address;
-use kaspa_consensus_core::{Hash, header::Header};
+use kaspa_consensus_core::{header::Header, Hash};
 use kaspa_grpc_client::GrpcClient;
 use kaspa_rpc_core::api::rpc::RpcApi;
 use kaspa_testing_integration::common::daemon::Daemon;

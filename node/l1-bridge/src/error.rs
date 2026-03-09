@@ -48,7 +48,11 @@ impl From<RpcError> for Error {
             || msg.contains("data is missing")
             || msg.contains("not in selected parent chain");
 
-        if is_checkpoint_lost { Error::CheckpointLost(e) } else { Error::Rpc(e) }
+        if is_checkpoint_lost {
+            Error::CheckpointLost(e)
+        } else {
+            Error::Rpc(e)
+        }
     }
 }
 

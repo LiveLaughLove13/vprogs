@@ -1,0 +1,57 @@
+[package]
+name = "vprogs-wallet-gui"
+version = "0.1.0"
+description = "VProgs Wallet - Private Kaspa Wallet with GUI"
+authors = ["VProgs Team"]
+license = ""
+repository = ""
+edition = "2021"
+
+[workspace]
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = [ "dialog-message", "dialog-confirm", "dialog-ask",
+    "shell-open",
+    "dialog-open",
+    "dialog-save",
+    "fs-copy-file",
+    "fs-create-dir",
+    "fs-exists",
+    "fs-read-dir",
+    "fs-read-file",
+    "fs-remove-dir",
+    "fs-remove-file",
+    "fs-rename-file",
+    "fs-write-file",
+    "path-all",
+    "window-close",
+    "window-hide",
+    "window-maximize",
+    "window-minimize",
+    "window-show",
+    "window-start-dragging",
+    "window-unmaximize",
+    "window-unminimize",
+] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+kaspa-addresses = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+kaspa-consensus-core = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+kaspa-wrpc-client = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+kaspa-rpc-core = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+vprogs-node-transaction-submitter = { path = "../../node/transaction-submitter" }
+vprogs-transaction-runtime = { path = "../../transaction-runtime/transaction-runtime" }
+dotenv = "0.15"
+hex = "0.4"
+thiserror = "2"
+dirs = "5.0"
+
+[features]
+# This feature is used for production builds or when `devPath` points to the filesystem
+# DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]
+

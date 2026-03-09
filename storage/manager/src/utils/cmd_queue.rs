@@ -1,6 +1,6 @@
 use std::sync::{
-    Arc,
     atomic::{AtomicUsize, Ordering},
+    Arc,
 };
 
 use crossbeam_queue::SegQueue;

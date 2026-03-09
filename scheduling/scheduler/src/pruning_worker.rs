@@ -1,8 +1,8 @@
 use std::{
     marker::PhantomData,
     sync::{
-        Arc,
         atomic::{AtomicU64, Ordering},
+        Arc,
     },
     thread::{self, JoinHandle},
 };

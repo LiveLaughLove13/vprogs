@@ -4,7 +4,7 @@
 //! and result processing.
 
 use cairo_vm::{
-    cairo_run::{CairoRunConfig, cairo_run},
+    cairo_run::{cairo_run, CairoRunConfig},
     hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
 };
 use sha2::{Digest, Sha256};
@@ -175,7 +175,7 @@ impl CairoExecutor {
                     // Extract the specific value index from the return data
                     // Return values are stored as concatenated Felt252 values (32 bytes each)
                     let felt_size = 32;
-                    let start_byte = (*value_idx as usize) * felt_size;
+                    let start_byte = *value_idx * felt_size;
                     let end_byte = start_byte + felt_size;
 
                     if end_byte > return_value.1.len() {

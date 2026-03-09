@@ -3,7 +3,7 @@ use vprogs_core_types::AccessMetadata;
 use vprogs_state_space::StateSpace;
 use vprogs_storage_types::Store;
 
-use crate::{ResourceAccess, RuntimeBatchRef, RuntimeTxRef, StateDiff, vm_interface::VmInterface};
+use crate::{vm_interface::VmInterface, ResourceAccess, RuntimeBatchRef, RuntimeTxRef, StateDiff};
 
 pub(crate) struct Resource<S: Store<StateSpace = StateSpace>, V: VmInterface> {
     last_access: Option<ResourceAccess<S, V>>,

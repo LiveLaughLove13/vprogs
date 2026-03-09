@@ -1,12 +1,12 @@
 use proc_macro2::Ident;
 use quote::{format_ident, quote};
 use syn::{
-    Fields, ItemStruct, Result, Token,
     parse::{Parse, ParseStream},
     parse_quote,
     punctuated::Punctuated,
     spanned::Spanned,
     token::Comma,
+    Fields, ItemStruct, Result, Token,
 };
 
 #[derive(Default)]

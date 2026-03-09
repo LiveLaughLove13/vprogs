@@ -1,9 +1,9 @@
 mod smart_pointer;
 
 use proc_macro::TokenStream;
-use syn::{ItemStruct, parse_macro_input};
+use syn::{parse_macro_input, ItemStruct};
 
-use crate::smart_pointer::{Args, expand_smart_pointer};
+use crate::smart_pointer::{expand_smart_pointer, Args};
 
 #[proc_macro_attribute]
 pub fn smart_pointer(args: TokenStream, input: TokenStream) -> TokenStream {

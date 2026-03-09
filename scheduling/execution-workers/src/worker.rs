@@ -4,7 +4,7 @@ use crossbeam_deque::{Stealer, Worker as WorkerQueue};
 use crossbeam_queue::ArrayQueue;
 use crossbeam_utils::sync::{Parker, Unparker};
 
-use crate::{Batch, BatchQueue, WorkersApi, task::Task};
+use crate::{task::Task, Batch, BatchQueue, WorkersApi};
 
 pub struct Worker<T: Task, B: Batch<T>> {
     id: usize,

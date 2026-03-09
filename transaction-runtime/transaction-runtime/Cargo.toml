@@ -7,6 +7,8 @@ version.workspace = true
 borsh.workspace                                          = true
 cairo-vm.workspace                                       = true
 sha2.workspace                                           = true
+secp256k1 = { version = "0.29", features = ["global-context", "rand-std"] }
+rand = "0.8"
 vprogs-core-types.workspace                              = true
 vprogs-scheduling-scheduler.workspace                    = true
 vprogs-state-space.workspace                             = true

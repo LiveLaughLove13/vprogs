@@ -1,14 +1,14 @@
 use std::{
     marker::PhantomData,
-    sync::{Arc, atomic::AtomicBool},
+    sync::{atomic::AtomicBool, Arc},
 };
 
 use vprogs_storage_types::Store;
 
 use crate::{
-    WriteCmd,
     utils::{CmdQueue, WorkerHandle},
     write::{WriteConfig, WriteWorker},
+    WriteCmd,
 };
 
 pub struct WriteManager<K: Store, W: WriteCmd<K::StateSpace>> {

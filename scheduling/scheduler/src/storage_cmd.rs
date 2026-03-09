@@ -3,7 +3,7 @@ use vprogs_storage_manager::{ReadCmd, WriteCmd};
 use vprogs_storage_types::{ReadStore, Store};
 
 use crate::{
-    ResourceAccess, RuntimeBatch, StateDiff, rollback::Rollback, vm_interface::VmInterface,
+    rollback::Rollback, vm_interface::VmInterface, ResourceAccess, RuntimeBatch, StateDiff,
 };
 
 pub enum Read<S: Store<StateSpace = StateSpace>, V: VmInterface> {

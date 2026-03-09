@@ -1,12 +1,12 @@
 use std::{
     sync::{
-        Arc,
         atomic::{AtomicBool, Ordering},
+        Arc,
     },
     thread::JoinHandle,
 };
 
-use crossbeam_utils::{CachePadded, atomic::AtomicCell, sync::Unparker};
+use crossbeam_utils::{atomic::AtomicCell, sync::Unparker, CachePadded};
 
 pub struct WorkerHandle {
     unparker: Unparker,

@@ -1,9 +1,9 @@
 use vprogs_core_types::Checkpoint;
 
 use crate::{
-    BlockHash, ChainBlockMetadata,
     chain_block::ChainBlock,
     error::{Error, Result},
+    BlockHash, ChainBlockMetadata,
 };
 
 /// Tracks the virtual chain as a doubly-linked list between a finalized `root` and the latest

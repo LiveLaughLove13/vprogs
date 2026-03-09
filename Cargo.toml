@@ -53,18 +53,18 @@ resolver = "3"
   tokio-util = "0.7.17"
   workflow-core = "0.18.0"
 
-  # Kaspa dependencies (tn12 branch)
-  kaspa-addresses           = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
-  kaspa-consensus-core      = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
-  kaspa-core                = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
-  kaspa-grpc-client         = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
-  kaspa-hashes              = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
-  kaspa-notify              = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
-  kaspa-rpc-core            = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
-  kaspa-testing-integration = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
-  kaspa-wrpc-client         = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
-  kaspa-wrpc-server         = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
-  kaspad                    = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
+  # Kaspa dependencies (master branch)
+  kaspa-addresses           = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+  kaspa-consensus-core      = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+  kaspa-core                = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+  kaspa-grpc-client         = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+  kaspa-hashes              = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+  kaspa-notify              = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+  kaspa-rpc-core            = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+  kaspa-testing-integration = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+  kaspa-wrpc-client         = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+  kaspa-wrpc-server         = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
+  kaspad                    = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "master" }
 
   # Cairo VM dependencies
   cairo-vm = "3.1.0"
@@ -76,6 +76,7 @@ resolver = "3"
   vprogs-core-types                               = { path = "core/types" }
   vprogs-node-l1-bridge                           = { path = "node/l1-bridge" }
   vprogs-node-test-suite                          = { path = "node/test-suite" }
+  vprogs-node-transaction-submitter                = { path = "node/transaction-submitter" }
   vprogs-node-vm                                  = { path = "node/vm" }
   vprogs-scheduling-execution-workers             = { path = "scheduling/execution-workers" }
   vprogs-scheduling-scheduler                     = { path = "scheduling/scheduler" }

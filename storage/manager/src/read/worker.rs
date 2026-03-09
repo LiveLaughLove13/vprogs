@@ -1,18 +1,18 @@
 use std::{
     ops::Deref,
     sync::{
-        Arc,
         atomic::{AtomicBool, AtomicUsize, Ordering},
+        Arc,
     },
     thread,
 };
 
-use crossbeam_utils::{CachePadded, sync::Parker};
+use crossbeam_utils::{sync::Parker, CachePadded};
 use vprogs_storage_types::Store;
 
 use crate::{
-    ReadCmd,
     utils::{CmdQueue, WorkerHandle},
+    ReadCmd,
 };
 
 pub struct ReadWorker<K: Store, R: ReadCmd<K::StateSpace>> {

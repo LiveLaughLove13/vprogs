@@ -1,0 +1,70 @@
+[package]
+edition.workspace = true
+name              = "vprogs-node-transaction-submitter"
+version.workspace = true
+
+[dependencies]
+kaspa-consensus-core.workspace = true
+kaspa-rpc-core.workspace       = true
+kaspa-wrpc-client.workspace    = true
+kaspa-addresses.workspace       = true
+kaspa-hashes.workspace         = true
+kaspa-txscript = { git = "https://github.com/kaspanet/rusty-kaspa", branch = "tn12" }
+borsh.workspace                = true
+tokio.workspace                = true
+thiserror.workspace            = true
+log.workspace                  = true
+secp256k1 = { version = "0.29", features = ["global-context", "rand-std"] }
+hex = "0.4"
+sha2 = "0.10"
+ripemd = "0.1"
+blake2b_simd = "1.0"
+aes-gcm = "0.10"
+pbkdf2 = "0.12"
+rand = "0.8"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+base64 = "0.21"
+rpassword = "7.3"
+chrono = "0.4"
+clap = { version = "4.4", features = ["derive"] }
+dirs = "5.0"
+env_logger = "0.11"
+vprogs-transaction-runtime.workspace = true
+vprogs-transaction-runtime-transaction.workspace = true
+vprogs-transaction-runtime-transaction-effects.workspace = true
+vprogs-transaction-runtime-instruction.workspace = true
+vprogs-transaction-runtime-program-arg.workspace = true
+vprogs-transaction-runtime-address.workspace = true
+vprogs-node-vm.workspace = true
+vprogs-scheduling-scheduler.workspace = true
+vprogs-state-space.workspace = true
+vprogs-storage-types.workspace = true
+
+[dev-dependencies]
+env_logger = "0.11"
+dotenv = "0.15"
+
+[[example]]
+name = "public_transaction_with_cairo_proof"
+path = "examples/public_transaction_with_cairo_proof.rs"
+
+[[example]]
+name = "confidential_transaction"
+path = "examples/confidential_transaction.rs"
+
+[[example]]
+name = "full_privacy_transaction"
+path = "examples/full_privacy_transaction.rs"
+
+[[example]]
+name = "spend_from_stealth_address"
+path = "examples/spend_from_stealth_address.rs"
+
+[[example]]
+name = "generate_meta_address"
+path = "examples/generate_meta_address.rs"
+
+[[bin]]
+name = "vprogs-wallet"
+path = "src/bin/vprogs-wallet.rs"

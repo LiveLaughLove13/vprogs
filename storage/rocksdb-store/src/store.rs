@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, path::Path, sync::Arc};
 
-use rocksdb::{DB, DBIteratorWithThreadMode, Direction, IteratorMode};
+use rocksdb::{DBIteratorWithThreadMode, Direction, IteratorMode, DB};
 use vprogs_state_space::StateSpace;
 use vprogs_storage_types::{PrefixIterator, Store};
 

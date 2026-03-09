@@ -4,7 +4,7 @@ use crossbeam_deque::Worker;
 use crossbeam_queue::ArrayQueue;
 use intrusive_collections::LinkedList;
 
-use crate::{Batch, batch_queue::linked_list::Adapter, task::Task};
+use crate::{batch_queue::linked_list::Adapter, task::Task, Batch};
 
 pub struct BatchQueue<T: Task, B: Batch<T>> {
     queue: LinkedList<Adapter<B>>,
@@ -53,7 +53,7 @@ impl<T: Task, B: Batch<T>> BatchQueue<T, B> {
 mod linked_list {
     use std::ops::{Deref, DerefMut};
 
-    use intrusive_collections::{LinkedListLink, intrusive_adapter};
+    use intrusive_collections::{intrusive_adapter, LinkedListLink};
 
     pub struct Element<T> {
         pub link: LinkedListLink,

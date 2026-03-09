@@ -1,6 +1,6 @@
 use std::sync::{
-    Arc, Weak,
     atomic::{AtomicU64, Ordering},
+    Arc, Weak,
 };
 
 use arc_swap::ArcSwapOption;
@@ -9,7 +9,7 @@ use vprogs_state_space::StateSpace;
 use vprogs_storage_types::Store;
 
 use crate::{
-    AccessHandle, ResourceAccess, RuntimeBatchRef, Scheduler, StateDiff, vm_interface::VmInterface,
+    vm_interface::VmInterface, AccessHandle, ResourceAccess, RuntimeBatchRef, Scheduler, StateDiff,
 };
 
 #[smart_pointer(deref(tx))]
